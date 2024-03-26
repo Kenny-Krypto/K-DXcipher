@@ -3,7 +3,6 @@ import string
 
 #Root
 window = tk.Tk()
-#test
 
 #Top
 greeting = tk.Label(text="Convert ->")
@@ -15,7 +14,6 @@ frameLeft = tk.Frame()
 
 #init
 alph = list(string.ascii_uppercase)
-print(alph)
 charsTxtEnt = [] #Text
 charsTxtIn = [] #Conversion targets
 pos = 0
@@ -48,41 +46,45 @@ def glossary(): # build translation
         target = child.get().strip()
         if not target: # check if empty
             outputString.append(target)
-            outputCodex.append(0)
+            outputCodex.append(0) # color red
         else:
             outputString.append(child.get().upper())
-            outputCodex.append(1)
+            outputCodex.append(1) # color black
             
         index += 1
     return outputString, outputCodex
 
-def labelUpdate(posX, widthSen, output, codex): #update existing or create new
-    try:
-        transDisplay[posX].config(text=output)
-        transDisplay[posX].config(fg='red' if codex else 'black')
+def labelUpdate(index, widthSen, output, codex): #update existing or create new
+    try: # check if existing
+        if output == '\n':
+            transDisplay[index].config(text=" | ")
+        else:
+            transDisplay[index].config(text=output)
+        transDisplay[index].config(fg='red' if codex else 'black')
         
-    except IndexError:
+    except IndexError: # create new label
         if codex:
             transDisplay.append(tk.Label(transFrame, text = output,bd=0, fg = 'red'))
         else:
             transDisplay.append(tk.Label(transFrame, text = output,bd=0, fg = 'black'))
-        transDisplay[posX].grid(column=posX%widthSen,row=int(posX/widthSen))
+        transDisplay[index].grid(column=index%widthSen,row=int(index/widthSen))
 
 def translate(target, widthSen): # Translate
-    posX = 0
+    index = 0
     convertorStr, convertorCol = glossary() # pull translation
-    #print(convertorStr)
-    #print(convertorCol)
     for letter in target:
         output = ''
         codex = 0
         if letter == ' ': #spacing
             output = ' '
             codex = 0
-        else:
+        elif letter == '\n': #newLine
+            output = '\n'
+            codex = 0
+        else: # letter
             isUpper = letter.isupper()
-            index = alph.index(letter.upper())
-            output = convertorStr[index]
+            indexing = alph.index(letter.upper())
+            output = convertorStr[indexing]
             if not output: # no translation
                 output = letter
                 codex = 1
@@ -90,33 +92,33 @@ def translate(target, widthSen): # Translate
                 if not letter.isupper():
                     output = output.lower()
                 codex = 0
-        #create
-        labelUpdate(posX, widthSen, output, codex)
+        #create/update existing labels
+        labelUpdate(index, widthSen, output, codex)
         #positioning
-        posX += 1
+        index += 1
 
-translate("test", 50)
+translate("test", 50) # init
 
 #init
 frameLeft.grid(column = 0, row = 1)
 frameRight.grid(column = 1, row = 1)
 
-def clear_frame(target):
+def clear_frame(target): # destory
     for child in target.winfo_children():
         child.destroy()
         
-def clear_translation(target):
+def clear_translation(target): # clear labels
     for child in target.winfo_children():
         child.config(text='')
 
-ticks = 0
+ticks = 0 # tracker 84324
 def ticktock():
-    global ticks
-    ticks += 0.25
-    print(ticks)
-    clear_translation(transFrame)
-    translate(sourceText.get("1.0",'end-1c'), 50)
-    #refresh every second
+    global ticks #tracker 84324
+    ticks += 0.25 #tracker 84324
+    print(ticks) #tracker 84324
+    clear_translation(transFrame) # clear current translation
+    translate(sourceText.get("1.0",'end-1c'), 50) # generate new translation
+    #refresh every 0.25 second
     window.after(250, ticktock)
 
 
