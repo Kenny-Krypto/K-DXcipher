@@ -1,5 +1,16 @@
 import tkinter as tk
 import string
+'''
+Avg typing speed 40-60 wpm
+or 240-360 chars per min, max 6 chars per second, ~150ms
+
+Optimizations: (entry = user input to be translated)
+    Range edit, -- last update len of entry to next update len of entry (include + and -) 
+        -update between lengths
+    Copy and paste -- detect and refresh entry
+        - refresh all, or compare with last entry
+'''
+widthLimit = 100 #tbd
 
 #Root
 window = tk.Tk()
@@ -7,12 +18,9 @@ window.title('K-DXcipher')
 window.columnconfigure(0, weight=1)
 window.columnconfigure(1, weight=2)
 
-
-
 #Top
 greeting = tk.Label(text="Convert ->")
 greeting.grid(column = 0, row = 0, sticky="w")
-
 
 #frame 1 || Root = C0 R1 
 frameLeft = tk.Frame(window, width = 75, height = 550, highlightbackground="black", highlightthickness=1)
@@ -30,14 +38,19 @@ for letter in alph:
     pos+=1
 
 #frame 2 || Root = C2 R1  
-frameRight = tk.Canvas(window)
-frameRight.grid(sticky="NSEW")
-frameRight.grid_rowconfigure(2, weight=1)
-frameRight.grid_columnconfigure(0, weight=1)
+frameRightCanvas = tk.Canvas(window,height = 550, width= 500)
+frameRightCanvas.grid(row = 1, column = 1,sticky="NSEW")
+frameRightCanvas.grid_rowconfigure(2, weight=1)
+frameRightCanvas.grid_columnconfigure(0, weight=1)
 
+frameRight = tk.Frame(frameRightCanvas,height = 550, width= 500)
+frameRightCanvas.create_window(10,10,anchor='nw',window=frameRight)
 
-#scrollbar = tk.Scrollbar(window, orient="vertical", command=frameRight.yview)
-#scrollbar.grid(row=0, column=2, sticky='ns')
+scrollbar = tk.Scrollbar(window, orient="vertical")
+scrollbar.grid(row=0, column=2, sticky='ns')
+scrollbar.config(command = frameRightCanvas.yview)
+
+frameRightCanvas.config(yscrollcommand=scrollbar.set)
 
 #user input || frameRight = C0 R0
 sourceText = tk.Text(frameRight) 
@@ -54,7 +67,7 @@ def glossary(): # build translation
     outputString = []
     outputCodex = []
     index = 0
-    for child in charsTxtIn:
+    for child in charsTxtIn: #Uses a global Var
         target = child.get().strip()
         if not target: # check if empty
             outputString.append(target)
@@ -93,7 +106,7 @@ def translate(target, widthSen): # Translate
         elif letter == '\n': #newLine
             output = '\n'
             codex = 0
-        else: # letter
+        elif letter.upper() in alph: # letter
             isUpper = letter.isupper()
             indexing = alph.index(letter.upper())
             output = convertorStr[indexing]
@@ -104,17 +117,64 @@ def translate(target, widthSen): # Translate
                 if not letter.isupper():
                     output = output.lower()
                 codex = 0
+        else:
+            output = ' '
+            codex = 0
+            
         #create/update existing labels
         labelUpdate(index, widthSen, output, codex)
         #positioning
         index += 1
 
-translate("test", 50) # init
+def translateV2(target, widthSen, lastIndex, newIndex): # Translate
+    start = lastIndex
+    last = newIndex
+    if lastIndex > newIndex:
+        start = newIndex
+        last = lastIndex
+    index = 0
+    convertorStr, convertorCol = glossary() # pull translation
+    for index in range(start,last):
+        letter = ""
+        try:
+            letter = target[index]
+        except IndexError:
+            letter = ' '
+        output = ''
+        codex = 0
+        if letter == ' ': #spacing
+            output = ' '
+            codex = 0
+        elif letter == '\n': #newLine
+            output = '\n'
+            codex = 0
+        elif letter.upper() in alph: # letter
+            isUpper = letter.isupper()
+            indexing = alph.index(letter.upper())
+            output = convertorStr[indexing]
+            if not output: # no translation
+                output = letter
+                codex = 1
+            else: # translate
+                if not letter.isupper():
+                    output = output.lower()
+                codex = 0
+        else:
+            output = ' '
+            codex = 0
+            
+        #create/update existing labels
+        labelUpdate(index, widthSen, output, codex)
+        #positioning
+        #index += 1
+
+translate("Initializing", widthLimit) # init
 
 #init
 frameLeft.grid(column = 0, row = 1, sticky="w")
 frameLeft.grid_propagate(0)
 frameRight.grid(column = 1, row = 1)
+frameRight.grid_propagate(0)
 
 def clear_frame(target): # destory
     for child in target.winfo_children():
@@ -123,17 +183,45 @@ def clear_frame(target): # destory
 def clear_translation(target): # clear labels
     for child in target.winfo_children():
         child.config(text='')
-
+        
+clear_translation(transFrame) # clear init
+phraseLenLock = False
+phraseLen = 0
 ticks = 0 # tracker 84324
 def ticktock():
+    global phraseLen
     global ticks #tracker 84324
-    ticks += 0.25 #tracker 84324
+    ticks += 0.10 #tracker 84324
     print(ticks) #tracker 84324
-    clear_translation(transFrame) # clear current translation
-    translate(sourceText.get("1.0",'end-1c'), 50) # generate new translation
-    #refresh every 0.25 second
-    window.after(250, ticktock)
+    #print(phraseLen) #tracker 78465
+    userInput = sourceText.get("1.0",'end-1c')
+    translateV2(userInput, widthLimit, phraseLen, len(userInput)) # generate new translation
+    if not phraseLenLock:
+        phraseLen = len(userInput)
+    #refresh every 0.10 second
+    window.after(100, ticktock)
 
+keyPressHistory = []
+def keyPressDetector(event): # detect key press 
+    global phraseLen
+    if event.keysym=='Control_L': # record control L in case of pasting
+        if event.keysym not in keyPressHistory: # stop dups
+            keyPressHistory.append(event.keysym)
+    if event.keysym=='v':
+        if 'Control_L' in keyPressHistory: #paste detected
+            if event.keysym not in keyPressHistory: # stop dups
+                keyPressHistory.append(event.keysym)
+            phraseLen = 0
+            phraseLenLock = True
+
+def keyReleaseDetector(event): #clear held down pressed keys from history
+    if event.keysym in keyPressHistory:
+        keyPressHistory.pop(keyPressHistory.index(event.keysym))
+    if event.keysym=='v': 
+        phraseLenLock = False
+            
+window.bind("<KeyRelease>", keyReleaseDetector)
+window.bind("<KeyPress>", keyPressDetector)
 
 window.after(1000, ticktock)
 window.mainloop()
