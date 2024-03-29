@@ -18,14 +18,14 @@ window.title('K-DXcipher')
 window.columnconfigure(0, weight=1)
 window.columnconfigure(1, weight=2)
 
-#Top
+#Top will be removed
 greeting = tk.Label(text="Convert ->")
 greeting.grid(column = 0, row = 0, sticky="w")
 
-#frame 1 || Root = C0 R1 
+''' Frame Left [GUI] '''
 frameLeft = tk.Frame(window, width = 75, height = 550, highlightbackground="black", highlightthickness=1)
 
-#init
+#init vars
 alph = list(string.ascii_uppercase)
 charsTxtEnt = [] #Text
 charsTxtIn = [] #Conversion targets
@@ -37,7 +37,7 @@ for letter in alph:
     charsTxtIn[pos].grid(column=2, row=pos)
     pos+=1
 
-#frame 2 || Root = C2 R1  
+''' Frame Right [GUI] '''
 frameRightCanvas = tk.Canvas(window,height = 550, width= 500)
 frameRightCanvas.grid(row = 1, column = 1,sticky="NSEW")
 frameRightCanvas.grid_rowconfigure(2, weight=1)
@@ -62,6 +62,15 @@ transFrame.grid(column = 0, row = 1,sticky="NSEW")
 transFrame.configure(highlightthickness=0)
 transDisplay = []
 
+''' Top Stucture '''
+
+#init
+frameLeft.grid(column = 0, row = 1, sticky="w")
+frameLeft.grid_propagate(0)
+frameRight.grid(column = 1, row = 1)
+frameRight.grid_propagate(0)
+
+''' Functions '''
 
 def glossary(): # build translation
     outputString = []
@@ -168,13 +177,7 @@ def translateV2(target, widthSen, lastIndex, newIndex): # Translate
         #positioning
         #index += 1
 
-translate("Initializing", widthLimit) # init
-
-#init
-frameLeft.grid(column = 0, row = 1, sticky="w")
-frameLeft.grid_propagate(0)
-frameRight.grid(column = 1, row = 1)
-frameRight.grid_propagate(0)
+''' Clean Up Functions '''
 
 def clear_frame(target): # destory
     for child in target.winfo_children():
@@ -184,22 +187,7 @@ def clear_translation(target): # clear labels
     for child in target.winfo_children():
         child.config(text='')
         
-clear_translation(transFrame) # clear init
-phraseLenLock = False
-phraseLen = 0
-ticks = 0 # tracker 84324
-def ticktock():
-    global phraseLen
-    global ticks #tracker 84324
-    ticks += 0.10 #tracker 84324
-    print(ticks) #tracker 84324
-    #print(phraseLen) #tracker 78465
-    userInput = sourceText.get("1.0",'end-1c')
-    translateV2(userInput, widthLimit, phraseLen, len(userInput)) # generate new translation
-    if not phraseLenLock:
-        phraseLen = len(userInput)
-    #refresh every 0.10 second
-    window.after(100, ticktock)
+''' Key Binding Code '''
 
 keyPressHistory = []
 def keyPressDetector(event): # detect key press 
@@ -223,5 +211,25 @@ def keyReleaseDetector(event): #clear held down pressed keys from history
 window.bind("<KeyRelease>", keyReleaseDetector)
 window.bind("<KeyPress>", keyPressDetector)
 
+'''  Starting program / Main Loop '''
+
+translate("Initializing", widthLimit) # init
+clear_translation(transFrame) # clear init
+phraseLenLock = False
+phraseLen = 0
+ticks = 0 # tracker 84324
+def ticktock(): # Main Loop
+    global phraseLen
+    global ticks #tracker 84324
+    ticks += 0.10 #tracker 84324
+    print(ticks) #tracker 84324
+    #print(phraseLen) #tracker 78465
+    userInput = sourceText.get("1.0",'end-1c')
+    translateV2(userInput, widthLimit, phraseLen, len(userInput)) # generate new translation
+    if not phraseLenLock:
+        phraseLen = len(userInput)
+    #refresh every 0.10 second
+    window.after(100, ticktock)
+    
 window.after(1000, ticktock)
 window.mainloop()
