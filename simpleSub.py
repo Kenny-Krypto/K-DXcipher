@@ -115,6 +115,9 @@ def translate(target, widthSen): # Translate
         elif letter == '\n': #newLine
             output = '\n'
             codex = 0
+        elif letter in string.digits:
+            output = letter
+            codex = 0
         elif letter.upper() in alph: # letter
             isUpper = letter.isupper()
             indexing = alph.index(letter.upper())
