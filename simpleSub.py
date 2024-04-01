@@ -176,6 +176,22 @@ def translateV2(target, widthSen, lastIndex, newIndex): # Translate
         labelUpdate(index, widthSen, output, codex)
         #positioning
         #index += 1
+''' TextBox Functions'''
+
+def getTextIndex(textBox, targetIndex): # obtain str index given [Line.CharIndex]
+    lineNum, charPos = targetIndex.split('.')
+    line = 1
+    index = int(charPos)
+    while line < int(lineNum):
+        numStr = str(line)
+        index += len(textBox.get(numStr + ".0", numStr + '.end')) + 1
+        line += 1
+    return index
+    
+def getTextSelectIndex(textBox, targetIndexes):
+    leftmost = getTextIndex(textBox, textBox.index(targetIndexes[0]))
+    rightmost = getTextIndex(textBox, textBox.index(targetIndexes[1]))
+    return [leftmost,rightmost]
 
 ''' Clean Up Functions '''
 
@@ -192,6 +208,7 @@ def clear_translation(target): # clear labels
 keyPressHistory = []
 def keyPressDetector(event): # detect key press 
     global phraseLen
+    global isHighlight
     if event.keysym=='Control_L': # record control L in case of pasting
         if event.keysym not in keyPressHistory: # stop dups
             keyPressHistory.append(event.keysym)
@@ -201,7 +218,20 @@ def keyPressDetector(event): # detect key press
                 keyPressHistory.append(event.keysym)
             phraseLen = 0
             phraseLenLock = True
-
+    if event.keysym=='Shift_L':
+        if event.keysym not in keyPressHistory: # stop dups
+            keyPressHistory.append(event.keysym)
+    if event.keysym=='Shift_R':
+        if event.keysym not in keyPressHistory: # stop dups
+            keyPressHistory.append(event.keysym)
+    if isHighlight: #
+        if 'Shift_L' not in keyPressHistory and 'Shift_R' not in keyPressHistory:
+            left, right = getTextSelectIndex(sourceText, currentHighlight)
+            currentText = sourceText.get("1.0",'end-1c')
+            if right-left == 1:
+                translateV2(currentText, widthLimit, left, right)
+            else:
+                translateV2(currentText, widthLimit, left, maxLen)
 def keyReleaseDetector(event): #clear held down pressed keys from history
     if event.keysym in keyPressHistory:
         keyPressHistory.pop(keyPressHistory.index(event.keysym))
@@ -211,25 +241,48 @@ def keyReleaseDetector(event): #clear held down pressed keys from history
 window.bind("<KeyRelease>", keyReleaseDetector)
 window.bind("<KeyPress>", keyPressDetector)
 
+''' Test Code '''
+
+        
+''' end Text Code '''
+
 '''  Starting program / Main Loop '''
 
 translate("Initializing", widthLimit) # init
 clear_translation(transFrame) # clear init
+#Global Vars
 phraseLenLock = False
 phraseLen = 0
+isHighlight = False
+currentHighlight = []
+maxLen = 0
 ticks = 0 # tracker 84324
 def ticktock(): # Main Loop
+    #init
+    global isHighlight
+    global currentHighlight
+    global maxLen
     global phraseLen
     global ticks #tracker 84324
+    #current input:
+    userInput = sourceText.get("1.0",'end-1c')
+    #Highlighted Text:
+    currentHighlight = sourceText.tag_ranges("sel")
+    isHighlight = True if currentHighlight else False
+    #Max Length before any edits:
+    maxLen = len(userInput)
+    #Test
     ticks += 0.10 #tracker 84324
     print(ticks) #tracker 84324
     #print(phraseLen) #tracker 78465
-    userInput = sourceText.get("1.0",'end-1c')
-    translateV2(userInput, widthLimit, phraseLen, len(userInput)) # generate new translation
+    #Main function:
+    translateV2(userInput, widthLimit, phraseLen, maxLen) # generate new translation
+    #Update range edit:
     if not phraseLenLock:
-        phraseLen = len(userInput)
+        phraseLen = maxLen
     #refresh every 0.10 second
     window.after(100, ticktock)
     
 window.after(1000, ticktock)
 window.mainloop()
+
