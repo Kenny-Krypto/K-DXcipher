@@ -1,17 +1,20 @@
 import tkinter as tk
 import string
-'''
-Avg typing speed 40-60 wpm
-or 240-360 chars per min, max 6 chars per second, ~150ms
+#test
+testMode84324 = False
+ticks = 0 # tracker 84324
+#
 
-Optimizations: (entry = user input to be translated)
-    Range edit, -- last update len of entry to next update len of entry (include + and -) 
-        -update between lengths
-    Copy and paste -- detect and refresh entry
-        - refresh all, or compare with last entry
-'''
+''' Global Vars '''
 widthLimit = 100 #tbd
+phraseLenLock = False #Update lock 
+phraseLen = 0 #Translated Length
+isHighlight = False #Text Highlight check 
+currentHighlight = [] #Highlighed Text Range
+cursorPos = [] #Cursor position in sourceText
+maxLen = 0 #Recorded length of sourceText
 
+''' Main Window '''
 #Root
 window = tk.Tk()
 window.title('K-DXcipher')
@@ -180,9 +183,9 @@ def translateV2(target, widthSen, lastIndex, newIndex): # Translate
             
         #create/update existing labels
         labelUpdate(index, widthSen, output, codex)
-        #positioning
-        #index += 1
+        
 pTransFunc = translateV2 # primary translate function
+
 ''' TextBox Functions'''
 
 def getTextIndex(textBox, targetIndex): # obtain str index given [Line.CharIndex]
@@ -216,9 +219,16 @@ keyPressHistory = []
 def keyPressDetector(event): # detect key press 
     global phraseLen
     global isHighlight
+    global cursorPos
+    #Current Text
+    currentText = sourceText.get("1.0",'end-1c')
     #Update Translated text when glossary updates
     if str(window.focus_get()).rstrip(string.digits) == ".!frame.!entry":
-        pTransFunc(sourceText.get("1.0",'end-1c'), widthLimit, 0, maxLen)
+        pTransFunc(currentText, widthLimit, 0, maxLen)
+    #Internal textBox update
+    if cursorPos < len(currentText)-1:
+        pTransFunc(currentText, widthLimit, cursorPos, len(currentText))
+        cursorPos += 1
     #Copy and paste detection
     if event.keysym=='Control_L': # record control L in case of pasting
         if event.keysym not in keyPressHistory: # stop dups
@@ -239,7 +249,6 @@ def keyPressDetector(event): # detect key press
     if isHighlight: #While not highlighting attempt to update if keys are pressed
         if 'Shift_L' not in keyPressHistory and 'Shift_R' not in keyPressHistory:
             left, right = getTextSelectIndex(sourceText, currentHighlight)
-            currentText = sourceText.get("1.0",'end-1c')
             if right-left == 1:
                 pTransFunc(currentText, widthLimit, left, right)
             else:
@@ -250,25 +259,14 @@ def keyReleaseDetector(event): #clear held down pressed keys from history
     if event.keysym=='v': #Paste protections
         phraseLenLock = False
             
+#Binding Keys
 window.bind("<KeyRelease>", keyReleaseDetector)
 window.bind("<KeyPress>", keyPressDetector)
-
-''' Test Code '''
-
-        
-''' end Text Code '''
 
 '''  Starting program / Main Loop '''
 initStr = 'Initializing'
 pTransFunc(initStr, widthLimit, 0, len(initStr)) # init
 clear_translation(transFrame) # clear init
-#Global Vars
-phraseLenLock = False
-phraseLen = 0
-isHighlight = False
-currentHighlight = []
-maxLen = 0
-ticks = 0 # tracker 84324
 def ticktock(): # Main Loop
     #init
     global isHighlight
@@ -276,16 +274,20 @@ def ticktock(): # Main Loop
     global maxLen
     global phraseLen
     global ticks #tracker 84324
+    global cursorPos
     #current input:
     userInput = sourceText.get("1.0",'end-1c')
     #Highlighted Text:
     currentHighlight = sourceText.tag_ranges("sel")
     isHighlight = True if currentHighlight else False
+    #cursorPosition
+    cursorPos = getTextIndex(sourceText, sourceText.index(tk.INSERT))
     #Max Length before any edits:
     maxLen = len(userInput)
     #Test
-    ticks += 0.10 #tracker 84324
-    print(ticks) #tracker 84324
+    if testMode84324:
+        ticks += 0.10 #tracker 84324
+        print(ticks) #tracker 84324
     #Main function:
     if str(window.focus_get()) == ".!canvas.!frame.!text":
         pTransFunc(userInput, widthLimit, phraseLen, maxLen) # generate new translation
